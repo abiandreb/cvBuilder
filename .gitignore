@@ -1,0 +1,60 @@
+# Home directory clutter — ignore everything that isn't part of this project
+AppData/
+Application Data/
+Contacts/
+Cookies/
+Desktop/
+Documents/
+Downloads/
+Favorites/
+Links/
+Local Settings/
+Music/
+My Documents/
+NetHood/
+OneDrive/
+Pictures/
+PrintHood/
+Recent/
+Saved Games/
+Searches/
+SendTo/
+Start Menu/
+Templates/
+Videos/
+_expo/
+assets/
+fonts/
+icons/
+node_modules/
+NTUSER.DAT
+NTUSER.DAT*
+ntuser.*
+*.blf
+*.regtrans-ms
+/index.html
+/manifest.json
+/metadata.json
+/package.json
+/server.js
+/sw.js
+.cagent/
+.claude/
+.claude.json
+
+# Frontend
+react/node_modules/
+react/dist/
+react/.env.local
+react/.env.*.local
+
+# Backend
+cv-api/node_modules/
+cv-api/.next/
+cv-api/app/generated/
+cv-api/.env
+cv-api/.env.local
+
+# OS
+.DS_Store
+Thumbs.db

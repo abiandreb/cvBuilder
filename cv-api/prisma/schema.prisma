@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  cvs       Cv[]
+}
+
+model Cv {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  template       String   @default("classic")
+  data           Json
+  language       String   @default("en")
+  isTranslation  Boolean  @default(false)
+  originalCvId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
