@@ -68,7 +68,7 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 | Database | PostgreSQL | 16 (Docker) | Robust relational DB with JSON column support for flexible CV data |
 | Auth tokens | jose | 6.2.2 | Web-standard JOSE implementation; fully async; works in Edge Runtime |
 | Password hashing | bcryptjs | 3.0.3 | Pure-JS bcrypt — no native module compilation needed; portable |
-| PDF export | html2canvas + jsPDF | latest | Renders the live React CV template to a canvas then encodes as A4 PDF |
+| PDF export | @react-pdf/renderer | latest | Renders all 5 CV templates as native PDF primitives — real selectable text, crisp fonts, natural page breaks |
 | Containerisation | Docker | Desktop | One-command PostgreSQL setup; no local Postgres installation required |
 
 ---
@@ -97,12 +97,13 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 │       ├── components/
 │       │   ├── CvCard.jsx             ← dashboard card with rename, design, translate, PDF, delete
 │       │   ├── CvPreview.jsx          ← live CV renderer (used in wizard and cards)
+│       │   ├── CvPdf.jsx              ← all 5 CV templates as react-pdf Document components
 │       │   ├── TranslateModal.jsx     ← language picker + translation trigger
 │       │   └── WizardSteps.jsx        ← Personal/Summary/Experience/Education/Skills/Final steps
 │       └── utils/
 │           ├── api.js                 ← all fetch() calls to cv-api
 │           ├── translate.js           ← thin wrapper calling api.translate()
-│           └── exportPdf.js           ← multi-page html2canvas → jsPDF export
+│           └── exportPdf.js           ← calls @react-pdf/renderer pdf().toBlob() and triggers download
 │
 └── cv-api/                ← Next.js API-only backend
     ├── package.json
@@ -145,7 +146,7 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 | Save & edit CVs | CVs are stored in PostgreSQL; editable at any time from the dashboard |
 | Inline rename | Double-click a CV card name to rename it in place |
 | Template switcher | "Design" dropdown on each card changes the template and persists it |
-| PDF export | html2canvas captures the CV at 2× scale; jsPDF splits the canvas into as many A4 pages as needed |
+| PDF export | `@react-pdf/renderer` generates real PDFs from native primitives — selectable text, crisp fonts, natural page breaks between entries |
 | AI translation | Sends CV data to `/api/translate`; creates a translated copy with a language badge |
 | Delete with confirm | Confirmation dialog before permanent deletion |
 | Responsive dashboard | CSS grid card layout adapts to viewport width |
@@ -378,7 +379,7 @@ Follow these steps to demo the full feature set in order:
 8. **Double-click** the card name to rename it inline — press Enter or click away to save.
 9. Click **Design** on the card — a dropdown shows all five templates. Pick a different one — the card thumbnail re-renders immediately and the change is persisted.
 10. Click **Translate** — the modal opens. Select **Ukrainian** and click **Translate** — a 2-second spinner appears, then the modal closes and a new card appears on the dashboard with a flag badge.
-11. On any card, click **Download PDF** — the button shows "Generating…" while html2canvas captures the preview, then a PDF file is saved to your downloads folder.
+11. On any card, click **Download PDF** — the button shows "Generating…" while `@react-pdf/renderer` builds the PDF from native primitives, then a file is saved to your downloads folder with real selectable text.
 12. Click **Delete** on a card — a confirmation dialog appears; confirm — the card is removed from the grid.
 13. Refresh the page (F5) — the app calls `GET /api/auth/me` with the stored token, the session is restored, and the dashboard loads with your remaining CVs intact.
 14. Click **Log out** — the token is removed from localStorage and you are returned to the landing page.
@@ -393,4 +394,4 @@ Follow these steps to demo the full feature set in order:
 - **Base64 photo stored in DB** — the `data.personal.photo` field accepts a Base64-encoded image string, which can be hundreds of kilobytes per CV. For production, photos should be uploaded to object storage (AWS S3, Cloudflare R2) and only the URL stored in the database.
 - **No email verification** — users can register with any email address without confirming ownership.
 - **No tests** — there are no unit or integration tests for either the API routes or the React components.
-- **Content may split mid-element** — the multi-page PDF export slices the canvas at fixed A4 boundaries, so a long paragraph or experience entry can be cut between pages. A proper fix requires rendering to native PDF primitives (e.g. `@react-pdf/renderer`) instead of a canvas screenshot.
+- **Gradient sidebar approximated in PDF** — the Vibrant template uses a CSS gradient in the browser preview but `@react-pdf/renderer` does not support gradients; the sidebar renders as solid purple (`#7c3aed`) in the exported PDF.
