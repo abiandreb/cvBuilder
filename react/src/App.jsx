@@ -2,8 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import './App.css'
 import { PersonalStep, SummaryStep, ExperienceStep, EducationStep, SkillsStep, FinalStep } from './components/WizardSteps'
 import CvPreview from './components/CvPreview'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { exportToPdf } from './utils/exportPdf'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { CvProvider, useCv } from './context/CvContext'
 import AuthPage from './pages/AuthPage'
@@ -130,11 +129,7 @@ function AppInner() {
     if (!cvRef.current) return
     setExporting(true)
     try {
-      const canvas = await html2canvas(cvRef.current, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' })
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const w = pdf.internal.pageSize.getWidth()
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, (canvas.height * w) / canvas.width)
-      pdf.save(`${(data.personal.name || 'cv').replace(/\s+/g, '_')}_cv.pdf`)
+      await exportToPdf(cvRef.current, `${(data.personal.name || 'cv').replace(/\s+/g, '_')}_cv.pdf`)
     } finally {
       setExporting(false)
     }

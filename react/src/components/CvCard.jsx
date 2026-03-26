@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { exportToPdf } from '../utils/exportPdf'
 import CvPreview from './CvPreview'
 import { useCv } from '../context/CvContext'
 
@@ -93,16 +92,7 @@ export default function CvCard({ cv, onEdit, onTranslate }) {
     if (!pdfRef.current || downloading) return
     setDownloading(true)
     try {
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      })
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const w = pdf.internal.pageSize.getWidth()
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, (canvas.height * w) / canvas.width)
-      pdf.save(`${(cv.data.personal?.name || cv.name).replace(/\s+/g, '_')}_cv.pdf`)
+      await exportToPdf(pdfRef.current, `${(cv.data.personal?.name || cv.name).replace(/\s+/g, '_')}_cv.pdf`)
     } finally {
       setDownloading(false)
     }

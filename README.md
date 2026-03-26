@@ -101,7 +101,8 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 │       │   └── WizardSteps.jsx        ← Personal/Summary/Experience/Education/Skills/Final steps
 │       └── utils/
 │           ├── api.js                 ← all fetch() calls to cv-api
-│           └── translate.js           ← thin wrapper calling api.translate()
+│           ├── translate.js           ← thin wrapper calling api.translate()
+│           └── exportPdf.js           ← multi-page html2canvas → jsPDF export
 │
 └── cv-api/                ← Next.js API-only backend
     ├── package.json
@@ -144,7 +145,7 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 | Save & edit CVs | CVs are stored in PostgreSQL; editable at any time from the dashboard |
 | Inline rename | Double-click a CV card name to rename it in place |
 | Template switcher | "Design" dropdown on each card changes the template and persists it |
-| PDF export | html2canvas captures the CV at 2× scale and jsPDF wraps it as an A4 document |
+| PDF export | html2canvas captures the CV at 2× scale; jsPDF splits the canvas into as many A4 pages as needed |
 | AI translation | Sends CV data to `/api/translate`; creates a translated copy with a language badge |
 | Delete with confirm | Confirmation dialog before permanent deletion |
 | Responsive dashboard | CSS grid card layout adapts to viewport width |
@@ -392,4 +393,4 @@ Follow these steps to demo the full feature set in order:
 - **Base64 photo stored in DB** — the `data.personal.photo` field accepts a Base64-encoded image string, which can be hundreds of kilobytes per CV. For production, photos should be uploaded to object storage (AWS S3, Cloudflare R2) and only the URL stored in the database.
 - **No email verification** — users can register with any email address without confirming ownership.
 - **No tests** — there are no unit or integration tests for either the API routes or the React components.
-- **Single-page CV only** — the PDF export renders the CV as a single page; multi-page CVs are truncated at the A4 boundary.
+- **Content may split mid-element** — the multi-page PDF export slices the canvas at fixed A4 boundaries, so a long paragraph or experience entry can be cut between pages. A proper fix requires rendering to native PDF primitives (e.g. `@react-pdf/renderer`) instead of a canvas screenshot.
