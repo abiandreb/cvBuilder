@@ -425,12 +425,12 @@ const TEMPLATES = [
   { id: 'vibrant',   name: 'Vibrant',   desc: 'Gradient sidebar, artistic' },
 ]
 
-export function FinalStep({ data, template, onTemplateChange, cvRef, onExport, exporting, onBack, onSaveAndExit }) {
+export function FinalStep({ data, template, onTemplateChange, onExport, exporting, onBack, onSaveAndExit }) {
   return (
     <div className="final-step">
       <div className="final-preview-col">
         <div className="final-preview-scroll">
-          <CvPreview data={data} template={template} cvRef={cvRef} />
+          <CvPreview data={data} template={template} />
         </div>
       </div>
       <div className="final-controls-col">

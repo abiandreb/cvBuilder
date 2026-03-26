@@ -3,6 +3,7 @@ import { exportToPdf } from '../utils/exportPdf'
 import CvPreview from './CvPreview'
 import { useCv } from '../context/CvContext'
 
+
 const ALL_TEMPLATES = [
   { id: 'classic',   name: 'Classic' },
   { id: 'modern',    name: 'Modern' },
@@ -59,7 +60,6 @@ export default function CvCard({ cv, onEdit, onTranslate }) {
   const [downloading, setDownloading] = useState(false)
   const nameRef = useRef(null)
   const menuRef = useRef(null)
-  const pdfRef = useRef(null)
 
   useEffect(() => {
     if (editing && nameRef.current) nameRef.current.select()
@@ -89,10 +89,10 @@ export default function CvCard({ cv, onEdit, onTranslate }) {
   }
 
   const handleDownload = async () => {
-    if (!pdfRef.current || downloading) return
+    if (downloading) return
     setDownloading(true)
     try {
-      await exportToPdf(pdfRef.current, `${(cv.data.personal?.name || cv.name).replace(/\s+/g, '_')}_cv.pdf`)
+      await exportToPdf(cv.data, cv.template, `${(cv.data.personal?.name || cv.name).replace(/\s+/g, '_')}_cv.pdf`)
     } finally {
       setDownloading(false)
     }
@@ -105,10 +105,6 @@ export default function CvCard({ cv, onEdit, onTranslate }) {
   return (
     <>
       {/* Hidden full-size CV for PDF export */}
-      <div style={{ position: 'fixed', left: '-10000px', top: 0, pointerEvents: 'none', zIndex: -1 }}>
-        <CvPreview data={cv.data} template={cv.template} cvRef={pdfRef} />
-      </div>
-
       <div className="cv-card">
         {/* Thumbnail */}
         <div className="cv-card-thumb" onClick={onEdit}>

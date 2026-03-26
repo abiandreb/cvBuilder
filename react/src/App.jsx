@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import './App.css'
 import { PersonalStep, SummaryStep, ExperienceStep, EducationStep, SkillsStep, FinalStep } from './components/WizardSteps'
 import CvPreview from './components/CvPreview'
@@ -107,7 +107,6 @@ function AppInner() {
   const [wizardMode, setWizardMode] = useState('create')
   const [editingCvId, setEditingCvId] = useState(null)
   const [cvName, setCvName] = useState('My CV')
-  const cvRef = useRef(null)
 
   const update = useCallback((path, value) => {
     setData(prev => {
@@ -126,10 +125,9 @@ function AppInner() {
   }, [])
 
   const handleExport = async () => {
-    if (!cvRef.current) return
     setExporting(true)
     try {
-      await exportToPdf(cvRef.current, `${(data.personal.name || 'cv').replace(/\s+/g, '_')}_cv.pdf`)
+      await exportToPdf(data, template, `${(data.personal.name || 'cv').replace(/\s+/g, '_')}_cv.pdf`)
     } finally {
       setExporting(false)
     }
@@ -283,7 +281,6 @@ function AppInner() {
             data={data}
             template={template}
             onTemplateChange={setTemplate}
-            cvRef={cvRef}
             onExport={handleExport}
             exporting={exporting}
             onBack={back}
