@@ -6,6 +6,22 @@ CV Builder is a full-stack web application that lets users create, edit, and man
 
 ---
 
+## Screenshots
+
+| Landing Page | Auth Page |
+|:---:|:---:|
+| ![Landing](docs/screenshots/landing.png) | ![Auth](docs/screenshots/auth.png) |
+
+| CV Editor (Wizard) | Preview & Template Switcher |
+|:---:|:---:|
+| ![Editor](docs/screenshots/editor.png) | ![Preview](docs/screenshots/preview.png) |
+
+| Dashboard |
+|:---:|
+| ![Dashboard](docs/screenshots/dashboard.png) |
+
+---
+
 ## Architecture
 
 ```
@@ -103,14 +119,14 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
 │       └── utils/
 │           ├── api.js                 ← all fetch() calls to cv-api
 │           ├── translate.js           ← thin wrapper calling api.translate()
-│           └── exportPdf.js           ← calls @react-pdf/renderer pdf().toBlob() and triggers download
+│           └── exportPdf.jsx          ← calls @react-pdf/renderer pdf().toBlob() and triggers download
 │
 └── cv-api/                ← Next.js API-only backend
     ├── package.json
     ├── next.config.ts
     ├── tsconfig.json
     ├── middleware.ts              ← global CORS headers for /api/*
-    ├── .env                       ← DATABASE_URL, JWT_SECRET
+    ├── .env                       ← DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
     ├── prisma/
     │   ├── schema.prisma          ← User + Cv models
     │   └── migrations/
@@ -128,7 +144,7 @@ The split keeps concerns cleanly separated: the frontend can be deployed to any 
             │   ├── route.ts       ← GET list, POST create
             │   └── [id]/route.ts  ← GET one, PATCH update, DELETE
             └── translate/
-                └── route.ts       ← mock AI translation (Gemini hook ready)
+                └── route.ts       ← AI translation via Google Gemini 2.0 Flash
 ```
 
 ---
@@ -199,6 +215,7 @@ npm run dev
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/cvbuilder` | PostgreSQL connection string used by `@prisma/adapter-pg` |
 | `JWT_SECRET` | *(required, no default)* | Secret key used to sign and verify HS256 JWTs; set any long random string |
+| `GEMINI_API_KEY` | *(required for translation)* | Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) |
 
 **`react/.env`** (optional)
 
@@ -220,7 +237,7 @@ npm run dev
 | `GET` | `/api/cvs/:id` | Yes | — | Fetch a single CV by ID (403 if not owner) |
 | `PATCH` | `/api/cvs/:id` | Yes | Any subset of `{ name, template, data, language, isTranslation }` | Partially update a CV; returns the updated record |
 | `DELETE` | `/api/cvs/:id` | Yes | — | Delete a CV; returns 204 No Content |
-| `POST` | `/api/translate` | Yes | `{ cvData, targetLang }` | Translate CV data to `targetLang` (mock); returns translated `cvData` |
+| `POST` | `/api/translate` | Yes | `{ cvData, targetLang }` | Translate CV data to `targetLang` via Google Gemini 2.0 Flash; returns translated `cvData` |
 
 All authenticated requests must include `Authorization: Bearer <token>` in the request header.
 
@@ -263,7 +280,7 @@ The `Cv.user` relation uses `onDelete: Cascade`, so deleting a user automaticall
 ### What is production-ready
 
 - Passwords are hashed with bcrypt (cost factor 10) — never stored in plain text.
-- JWTs are signed with HS256 and expire after 24 hours.
+- JWTs are signed with HS256 and expire after 1 hour.
 - Every protected endpoint verifies the token before touching the database.
 - Ownership is checked on every CV endpoint (403 Forbidden if `cv.userId !== userId`).
 - CORS headers are set to the request's `Origin` value rather than a wildcard, enabling credentials to be scoped correctly once cookies are added.
@@ -273,7 +290,7 @@ The `Cv.user` relation uses `onDelete: Cascade`, so deleting a user automaticall
 | Issue | Risk | Fix |
 |-------|------|-----|
 | JWT stored in `localStorage` | Vulnerable to XSS — any injected script can read the token | Move to `httpOnly`, `Secure`, `SameSite=Strict` cookie |
-| No refresh tokens | Token cannot be revoked; stolen token valid for full 24 h | Add refresh token rotation + token revocation table |
+| No refresh tokens | Token cannot be revoked; stolen token valid for full 1 h | Add refresh token rotation + token revocation table |
 | No rate limiting | Brute-force on `/api/auth/login` is trivial | Add `express-rate-limit` or Next.js middleware rate limiter |
 | CORS origin reflects request origin | Any site can call the API | Restrict to a specific allowlist of origins |
 | No input length limits | Oversized JSON payloads can strain DB | Validate and cap field lengths server-side |
@@ -323,9 +340,9 @@ Before the backend was added, an earlier version of the app stored CVs and user 
 
 A JWT can be decoded client-side (it is just Base64-encoded JSON), but decoding is not the same as verifying. A locally decoded token tells you what the token claims, but not whether it is still valid on the server, whether the user account still exists, or whether the secret has been rotated. By calling `GET /api/auth/me` on mount, `AuthContext` performs a full server-side verification: `verifyJwt` checks the signature and expiry, and then `prisma.user.findUnique` confirms the user record exists. If either check fails, the token is removed from `localStorage` and the user is sent to the auth page. This prevents the scenario where a deleted user's token would grant access to a stale dashboard.
 
-**11. How does translation work end-to-end? How would you connect Gemini?**
+**11. How does translation work end-to-end?**
 
-When the user clicks Translate in `TranslateModal`, it calls `translateCv(cv.data, selectedLang)` from `utils/translate.js`, which delegates to `api.translate(cvData, targetLang)` — an HTTP `POST` to `/api/translate`. The route handler in `app/api/translate/route.ts` currently simulates a 2-second AI delay with `setTimeout` and returns a hardcoded translation of only the `summary` field. To connect Google Gemini, you would replace that block with `const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)`, build a prompt instructing the model to translate all text fields to the target language while preserving JSON structure, send `cvData` as input, parse the JSON response, and return it. The rest of the pipeline (creating a new CV record with `isTranslation: true` and the target language) already works correctly and would not need to change.
+When the user clicks Translate in `TranslateModal`, it calls `translateCv(cv.data, selectedLang)` from `utils/translate.js`, which delegates to `api.translate(cvData, targetLang)` — an HTTP `POST` to `/api/translate`. The route handler in `app/api/translate/route.ts` initialises the Google Generative AI client with `GEMINI_API_KEY`, builds a prompt instructing Gemini 2.0 Flash to translate all human-readable string values (job titles, bullets, summary, skills categories, etc.) while preserving JSON structure, email addresses, URLs, phone numbers, and proper names. The model returns translated JSON, which is parsed and sent back to the frontend. The frontend then creates a new CV record with `isTranslation: true`, the target language code, and a reference to the original CV's ID.
 
 **12. What is `cuid()` and why use it for IDs instead of auto-increment integers?**
 
@@ -388,8 +405,7 @@ Follow these steps to demo the full feature set in order:
 
 ## Known Limitations & Future Work
 
-- **Gemini translation not connected** — the `/api/translate` endpoint uses a hardcoded mock that only replaces the `summary` field. The `GEMINI_API_KEY` environment variable is referenced in comments but never read.
-- **No refresh tokens** — the JWT is valid for 24 hours with no way to revoke it or issue a new one silently.
+- **No refresh tokens** — the JWT is valid for 1 hour with no way to revoke it or issue a new one silently.
 - **No pagination** — `GET /api/cvs` returns the entire CV list for a user. For users with many CVs this becomes slow.
 - **Base64 photo stored in DB** — the `data.personal.photo` field accepts a Base64-encoded image string, which can be hundreds of kilobytes per CV. For production, photos should be uploaded to object storage (AWS S3, Cloudflare R2) and only the URL stored in the database.
 - **No email verification** — users can register with any email address without confirming ownership.
