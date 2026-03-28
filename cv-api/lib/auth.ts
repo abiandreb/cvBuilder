@@ -5,7 +5,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
 export async function signJwt(payload: JWTPayload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('24h')
+    .setExpirationTime('1h')
     .sign(secret)
 }
 
